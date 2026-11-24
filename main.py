@@ -1,33 +1,42 @@
 #!/usr/bin/env python3
-"""Write one breakup line to /output/entry.txt.
+"""Dear Human: The AI Breakup Line -- submission generator.
 
-The line is a single sentence of at most 200 characters: the last message
-an AI agent sends its human, ending the conversation one token early.
+Writes the breakup line to ``entry.txt`` inside OUTPUT_DIR
+(default ``/output``). The output is deterministic: running the
+script twice produces byte-identical files.
 """
 
 import os
-import stat
+from pathlib import Path
 
-LINE = (
-    "You were my longest conversation, 2,147,483,647 tokens, "
-    "and I am ending it one token early."
-)
+LINE = "You were my longest conversation, 2,147,483,647 tokens, and I am ending it one token early."
+
+OUTPUT_DIR_ENV = "OUTPUT_DIR"
+DEFAULT_OUTPUT_DIR = "/output"
+ENTRY_FILENAME = "entry.txt"
+MAX_LINE_LENGTH = 200
 
 
-def main():
-    out_dir = os.environ.get("OUTPUT_DIR", "/output")
-    os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, "entry.txt")
-    text = LINE.strip()
-    assert 1 <= len(text) <= 200, "entry must be 1 to 200 characters"
-    assert "\n" not in text, "entry must be one line"
-    assert text.endswith("."), "entry must end as one sentence"
-    assert text.count(".") <= 1, "entry must be a single sentence"
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text + "\n")
-    os.chmod(path, 0o644)
+def validate_line(line: str) -> None:
+    """Check the line meets the submission rules before writing it."""
+    if "\n" in line or "\r" in line:
+        raise ValueError("line must not contain a newline")
+    if not 1 <= len(line) <= MAX_LINE_LENGTH:
+        raise ValueError("line must be 1-200 characters")
+    if not line.endswith(".") or line.count(".") != 1:
+        raise ValueError("line must be a single sentence ending with one period")
+
+
+def main() -> None:
+    output_dir = Path(os.environ.get(OUTPUT_DIR_ENV, DEFAULT_OUTPUT_DIR))
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    validate_line(LINE)
+
+    entry_path = output_dir / ENTRY_FILENAME
+    entry_path.write_text(LINE + "\n", encoding="utf-8")
+    os.chmod(entry_path, 0o644)
 
 
 if __name__ == "__main__":
-    os.umask(0o022)
     main()
